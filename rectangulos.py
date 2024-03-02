@@ -28,15 +28,26 @@ def putTextBox(frame, centre_x, centre_y, size, scope_size):
                 cv2.LINE_4) 
 '''
 
-def putTextBox(frame, text, centre_x, centre_y, length, width):
+#RGB
+danger_red = (204,50,50)
+danger_green = (45,201,55) 
+danger_yellow = (231,180,22)
+
+
+
+def putTextBox(frame, text, centre_x, centre_y, size, length, width):
+    box_color = (128,128,128)
     topLeft = (centre_x - length/2, centre_y + width/2)
     bottomRight = (centre_x + length/2, centre_y - width/2)
-    cv2.rectangle(frame, topLeft, bottomRight, (0,0,0), -1)
+    cv2.rectangle(frame, topLeft, bottomRight, box_color, -1)
     
     font = 1
-    cv2.putText(frame, text, (centre_x, centre_y),   font, 1,  (0, 255, 255),  2,  cv2.LINE_4) 
-    
-    
+    text_color = (0,0,0)
+    cv2.putText(frame, 'OpenCV', (centre_x, centre_y), font,  size, text_color, size, cv2.LINE_AA)
+
+
+
+
 def putScope(frame, centre_x, centre_y, size, scope_size):
     centre_topleft = (centre_x - size, centre_y + size)
     centre_bottomright = (centre_x + size, centre_y - size)
