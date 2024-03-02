@@ -52,10 +52,10 @@ def are_joints_visible(left_hip,right_hip, left_shoulder,right_shoulder):
 
 
 def check_vertical(lower_joint, upper_joint):
-    threshold = 0.4
-    x_distance = abs(lower_joint.y - upper_joint.y)
-    print(x_distance)
-    if x_distance > threshold:
+    threshold = 0.2
+    x_distance = abs(lower_joint.x - upper_joint.x)
+    #print("distance",x_distance)
+    if x_distance < threshold:
         return True
     return False
 
@@ -63,7 +63,7 @@ def is_standing(pose_landmarks) -> bool:
     left_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP]
     right_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.RIGHT_HIP]
     left_shoulder = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER]
-    right_shoulder = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER]
+    right_shoulder = pose_landmarks[mp.solutions.pose.PoseLandmark.RIGHT_SHOULDER]
     #Check for joint visibility
     if(not are_joints_visible(left_hip,right_hip, left_shoulder,right_shoulder)):
         return False
@@ -103,41 +103,47 @@ def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp
         draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
 
 
-base_options = python.BaseOptions(model_asset_path=model_path)
-options = vision.PoseLandmarkerOptions(
-    base_options=base_options,
-    running_mode=vision.RunningMode.LIVE_STREAM,
-    num_poses=num_poses,
-    min_pose_detection_confidence=min_pose_detection_confidence,
-    min_pose_presence_confidence=min_pose_presence_confidence,
-    min_tracking_confidence=min_tracking_confidence,
-    output_segmentation_masks=False,
-    result_callback=print_result
-)
 
-with vision.PoseLandmarker.create_from_options(options) as landmarker:
-    # Use OpenCV’s VideoCapture to start capturing from the webcam.
-    cap = cv2.VideoCapture(video_source)
+def main():
+    base_options = python.BaseOptions(model_asset_path=model_path)
+    options = vision.PoseLandmarkerOptions(
+        base_options=base_options,
+        running_mode=vision.RunningMode.LIVE_STREAM,
+        num_poses=num_poses,
+        min_pose_detection_confidence=min_pose_detection_confidence,
+        min_pose_presence_confidence=min_pose_presence_confidence,
+        min_tracking_confidence=min_tracking_confidence,
+        output_segmentation_masks=False,
+        result_callback=print_result
+    )
 
-    # Create a loop to read the latest frame from the camera using VideoCapture#read()
-    while cap.isOpened():
-        success, image = cap.read()
-        if not success:
-            print("Image capture failed.")
-            break
+    with vision.PoseLandmarker.create_from_options(options) as landmarker:
+        # Use OpenCV’s VideoCapture to start capturing from the webcam.
+        cap = cv2.VideoCapture(video_source)
 
-        # Convert the frame received from OpenCV to a MediaPipe’s Image object.
-        mp_image = mp.Image(
-            image_format=mp.ImageFormat.SRGB,
-            data=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-        timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
-        landmarker.detect_async(mp_image, timestamp_ms)
+        # Create a loop to read the latest frame from the camera using VideoCapture#read()
+        while cap.isOpened():
+            success, image = cap.read()
+            if not success:
+                print("Image capture failed.")
+                break
 
-        if to_window is not None:
-            cv2.imshow("MediaPipe Pose Landmark", to_window)
+            # Convert the frame received from OpenCV to a MediaPipe’s Image object.
+            mp_image = mp.Image(
+                image_format=mp.ImageFormat.SRGB,
+                data=cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+            timestamp_ms = int(cv2.getTickCount() / cv2.getTickFrequency() * 1000)
+            landmarker.detect_async(mp_image, timestamp_ms)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            if to_window is not None:
+                cv2.imshow("MediaPipe Pose Landmark", to_window)
 
-    cap.release()
-    cv2.destroyAllWindows()
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    # This code won't run if this file is imported.
+    main()
