@@ -181,13 +181,14 @@ def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp
 
     print(center)
 
-    
     to_window = cv2.cvtColor(
-        draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
+        output_image.numpy_view(), cv2.COLOR_RGB2BGR)
+    #to_window = cv2.cvtColor(
+    #    draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
     
     if(center[0] > 0 and center[1] > 0):
         putScope(to_window, center[0], center[1], 10*z_est, 200*z_est)
-        to_window = cv2.putText(to_window, pose, (center[0]-int(100*z_est), center[1]), cv2.FONT_HERSHEY_SIMPLEX, 10*z_est, (0, 255, 255), 2, cv2.LINE_4)
+        to_window = cv2.putText(to_window, pose, (center[0]-int(100*z_est), center[1]), cv2.FONT_HERSHEY_PLAIN, 100*(z_est*0.1), (0, 255, 255), 2, cv2.LINE_4)
 
 
 
