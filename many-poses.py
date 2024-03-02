@@ -10,7 +10,7 @@ model_path = "pose_landmarker_lite.task"
 
 video_source = 0
 
-num_poses = 1
+num_poses = 2
 min_pose_detection_confidence = 0.5
 min_pose_presence_confidence = 0.5
 min_tracking_confidence = 0.5
@@ -42,18 +42,20 @@ def putRectangle(frame, centre_x, size, centre_y, ):
     cv2.rectangle(frame, start_point, end_point, 'red', 1)
     '''
 def putScope(frame, centre_x, centre_y, size, scope_size):
-    size = int(size)
-    scope_size = int(scope_size)
-    centre_topleft = (centre_x - size, centre_y + 2*size)
-    centre_bottomright = (centre_x + size, centre_y - 2*size)
+    centre_topleft = (centre_x - size, centre_y + size)
+    centre_bottomright = (centre_x + size, centre_y - size)
+    
     #top point
-    cv2.rectangle(frame, (centre_topleft[0],centre_topleft[1] + scope_size), (centre_bottomright[0], centre_bottomright[1] + scope_size), (0,0,0), -1)
+    cv2.rectangle(frame, (centre_topleft[0],centre_topleft[1] + 100*scope_size), (centre_bottomright[0], centre_bottomright[1] + scope_size), (0,255,0), -1)
+     
     #right point
-    cv2.rectangle(frame, (centre_topleft[0] + scope_size,centre_topleft[1]) , (centre_bottomright[0]+scope_size, centre_bottomright[1]), (0,0,0), -1)
+    cv2.rectangle(frame, (centre_topleft[0] + scope_size,centre_topleft[1]) , (centre_bottomright[0]+100*scope_size, centre_bottomright[1]), (0,255,0), -1)
+     
     #left point
-    cv2.rectangle(frame, (centre_topleft[0] -  scope_size,centre_topleft[1]) , (centre_bottomright[0]-scope_size, centre_bottomright[1]) ,(0,0,0), -1)
+    cv2.rectangle(frame, (centre_topleft[0] -  scope_size,centre_topleft[1]) , (centre_bottomright[0]-100*scope_size, centre_bottomright[1]) ,(0,255,0), -1)
+    
     #down point
-    cv2.rectangle(frame, (centre_topleft[0], centre_topleft[1]-scope_size) , (centre_bottomright[0] , centre_bottomright[1] - scope_size), (0,0,0), -1)
+    cv2.rectangle(frame, (centre_topleft[0], centre_topleft[1]-100*scope_size) , (centre_bottomright[0] , centre_bottomright[1] - scope_size), (0,255,0), -1)
 
 
 
@@ -166,29 +168,29 @@ def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp
     last_timestamp_ms = timestamp_ms
     # print("pose landmarker result: {}".format(detection_result))
     #print(detection_result)
+    height, width, channels = output_image.numpy_view().shape 
     center = (0,0)
     z_est = 1.0
     pose = "UNKNOWN"
+    pose_list = []
     if(len(detection_result.pose_landmarks) > 0):
-        pose = classify_pose(detection_result.pose_landmarks[0])
-        center = get_center(detection_result.pose_landmarks[0])
-        z_est = z_estimation(detection_result.pose_landmarks[0])
+        for pose_landmarks in detection_result.pose_landmarks:
+            pose = classify_pose(pose_landmarks)
+            center = get_center(pose_landmarks)
+            center = denormalize(center, height, width)
+            z_est = z_estimation(pose_landmarks)
+            pose_list.append([pose, center, z_est])
 
-    height, width, channels = output_image.numpy_view().shape 
-    
-
-    center = denormalize(center, height, width)
-
-    print(center)
 
     to_window = cv2.cvtColor(
         output_image.numpy_view(), cv2.COLOR_RGB2BGR)
-    #to_window = cv2.cvtColor(
-    #    draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
+    to_window = cv2.cvtColor(
+        draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
     
-    if(center[0] > 0 and center[1] > 0):
-        putScope(to_window, center[0], center[1], 10*z_est, 200*z_est)
-        to_window = cv2.putText(to_window, pose, (center[0]-int(100*z_est), center[1]), cv2.FONT_HERSHEY_PLAIN, 100*(z_est*0.1), (0, 255, 255), 2, cv2.LINE_4)
+    for pose, center, z_est in pose_list:
+        if(center[0] > 0 and center[1] > 0):
+            putScope(to_window, center[0], center[1], int(50*(z_est*0.1)), int(400*(z_est)))
+            to_window = cv2.putText(to_window, pose, (center[0]-int(400*z_est), center[1]-int(300*z_est)), cv2.FONT_HERSHEY_PLAIN, 100*(z_est*0.1), (0, 255, 0), 2, cv2.LINE_4)
 
 
 
