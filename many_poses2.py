@@ -15,10 +15,6 @@ min_pose_detection_confidence = 0.5
 min_pose_presence_confidence = 0.5
 min_tracking_confidence = 0.5
 
-danger_red = (0,0,255)
-danger_green = (0,255,0)
-danger_yellow = (22,180,231)
-
 
 '''
 FONT_HERSHEY_SIMPLEX        = 0, //!< normal size sans-serif font
@@ -45,21 +41,21 @@ def putText(text, xcord, ycord, font):
 def putRectangle(frame, centre_x, size, centre_y, ):
     cv2.rectangle(frame, start_point, end_point, 'red', 1)
     '''
-def putScope(frame, centre_x, centre_y, size, scope_size, color = danger_green):
+def putScope(frame, centre_x, centre_y, size, scope_size):
     centre_topleft = (centre_x - size, centre_y + size)
     centre_bottomright = (centre_x + size, centre_y - size)
     
     #top point
-    cv2.rectangle(frame, (centre_topleft[0],centre_topleft[1] + 100*scope_size), (centre_bottomright[0], centre_bottomright[1] + scope_size), color, -1)
+    cv2.rectangle(frame, (centre_topleft[0],centre_topleft[1] + 100*scope_size), (centre_bottomright[0], centre_bottomright[1] + scope_size), (0,255,0), -1)
      
     #right point
-    cv2.rectangle(frame, (centre_topleft[0] + scope_size,centre_topleft[1]) , (centre_bottomright[0]+100*scope_size, centre_bottomright[1]), color, -1)
+    cv2.rectangle(frame, (centre_topleft[0] + scope_size,centre_topleft[1]) , (centre_bottomright[0]+100*scope_size, centre_bottomright[1]), (0,255,0), -1)
      
     #left point
-    cv2.rectangle(frame, (centre_topleft[0] -  scope_size,centre_topleft[1]) , (centre_bottomright[0]-100*scope_size, centre_bottomright[1]) ,color, -1)
+    cv2.rectangle(frame, (centre_topleft[0] -  scope_size,centre_topleft[1]) , (centre_bottomright[0]-100*scope_size, centre_bottomright[1]) ,(0,255,0), -1)
     
     #down point
-    cv2.rectangle(frame, (centre_topleft[0], centre_topleft[1]-100*scope_size) , (centre_bottomright[0] , centre_bottomright[1] - scope_size), color, -1)
+    cv2.rectangle(frame, (centre_topleft[0], centre_topleft[1]-100*scope_size) , (centre_bottomright[0] , centre_bottomright[1] - scope_size), (0,255,0), -1)
 
 
 
@@ -107,6 +103,8 @@ def are_joints_visible(left_hip,right_hip, left_shoulder,right_shoulder):
     is_visible_right_shoulder = right_shoulder.visibility > threshold
     return is_visible_left_hip and is_visible_right_hip and is_visible_left_shoulder and is_visible_right_shoulder
 
+def is_joint_visible(joint, threshold=0.3):
+    return joint.visibility > threshold
 
 def check_vertical(lower_joint, upper_joint, pose_landmarks):
     threshold = 0.3*z_estimation(pose_landmarks)
@@ -114,6 +112,13 @@ def check_vertical(lower_joint, upper_joint, pose_landmarks):
     x_distance = abs(lower_joint.x - upper_joint.x)
     #print("distance",x_distance)
     if x_distance < threshold:
+        return True
+    return False
+
+def check_y_distance(lower_joint, upper_joint, pose_landmarks, threshold):
+    threshold = 0.3*z_estimation(pose_landmarks)
+    y_distance = abs(lower_joint.y- upper_joint.y)
+    if y_distance < threshold:
         return True
     return False
 
@@ -136,38 +141,6 @@ def is_standing(pose_landmarks) -> bool:
 
     return False
 
-#################################
-def is_joint_visible(joint, threshold=0.3):
-    return joint.visibility > threshold
-
-def check_y_distance(lower_joint, upper_joint, pose_landmarks, threshold):
-    threshold = threshold*z_estimation(pose_landmarks)
-    y_distance = abs(lower_joint.y - upper_joint.y)
-    if y_distance < threshold:
-        return True
-    return False
-
-def is_lying_down(pose_landmarks):
-    head = pose_landmarks[mp.solutions.pose.PoseLandmark.NOSE]
-    left_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP]
-    right_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.RIGHT_HIP]
-    if is_joint_visible(head) and is_joint_visible(left_hip) and is_joint_visible(right_hip):
-        return check_y_distance(left_hip, head, pose_landmarks, 3) and check_y_distance(right_hip, head, pose_landmarks, 0.6)
-
-
-def is_crouching(pose_landmarks):
-    left_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP]
-    right_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.RIGHT_HIP]
-    left_knee = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_KNEE]
-    right_knee = pose_landmarks[mp.solutions.pose.PoseLandmark.RIGHT_KNEE]
-    if is_joint_visible(left_hip) and is_joint_visible(left_knee):
-        return check_y_distance(left_hip, left_knee, pose_landmarks, 0.4)
-    
-    if is_joint_visible(right_hip) and is_joint_visible(right_knee):
-        return check_y_distance(right_hip, right_knee, pose_landmarks, 0.4)
-
-    return False
-#########################################
 
 def get_center(pose_landmarks):
     left_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP]
@@ -179,20 +152,46 @@ def get_center(pose_landmarks):
     x = (left_hip.x + right_hip.x + left_shoulder.x + right_shoulder.x)/4
     y = (left_hip.y + right_hip.y + left_shoulder.y + right_shoulder.y)/4
     return (x,y)
+
+import math
+
+def calculate_angle(p1, p2, p3):
+    """
+    Calculate the angle between three points. Points are (x, y) tuples.
+    """
+    angle = math.degrees(math.atan2(p3.y - p2.y, p3.x - p2.x) - math.atan2(p1.y - p2.y, p1.x - p2.x))
+    print("angle is", angle)
+    return angle if angle >= 0 else angle + 360
+
+def is_crouching(pose_landmarks):
+    left_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP]
+    right_hip = pose_landmarks[mp.solutions.pose.PoseLandmark.RIGHT_HIP]
+    left_knee = pose_landmarks[mp.solutions.pose.PoseLandmark.LEFT_KNEE]
+    right_knee = pose_landmarks[mp.solutions.pose.PoseLandmark.RIGHT_KNEE]
+    if is_joint_visible(left_hip) and is_joint_visible(left_knee):
+        return check_y_distance(left_hip, left_knee, pose_landmarks, 1)
     
+    if is_joint_visible(right_hip) and is_joint_visible(right_knee):
+        return check_y_distance(right_hip, right_knee, pose_landmarks, 1)
+
+    return False
+
+
+
+    
+
+
 
 def classify_pose(pose_landmarks: landmark_pb2.NormalizedLandmarkList) -> str:
     # Classify the pose based on the pose landmarks
     # print("pose landmarks: {}".format(pose_landmarks))
-    standing = is_standing(pose_landmarks)
-    crouching = is_crouching(pose_landmarks)
-    lying = is_lying_down(pose_landmarks)
-    if(lying):
-        return "LYING DOWN"
-    elif(crouching):
-        return "CROUCHING"
-    else:
+    print ("is crouching: ", is_crouching(pose_landmarks))
+
+    if(is_standing(pose_landmarks)):
         return "STANDING"
+    else:
+        return "LYING DOWN"
+
     return "UNKNOWN"
 
 def denormalize(tup, height, width):
@@ -224,22 +223,13 @@ def print_result(detection_result: vision.PoseLandmarkerResult, output_image: mp
 
     to_window = cv2.cvtColor(
         output_image.numpy_view(), cv2.COLOR_RGB2BGR)
-    # to_window = cv2.cvtColor(
-    #     draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
+    to_window = cv2.cvtColor(
+        draw_landmarks_on_image(output_image.numpy_view(), detection_result), cv2.COLOR_RGB2BGR)
     
     for pose, center, z_est in pose_list:
         if(center[0] > 0 and center[1] > 0):
-            
-            color = danger_green
-            if(pose == "STANDING"):
-                color = danger_green
-            elif(pose == "LYING DOWN"):
-                color = danger_red
-            elif(pose == "CROUCHING"): 
-                color = danger_yellow
-            
-            putScope(to_window, center[0], center[1], int(50*(z_est*0.1)), int(400*(z_est)), color)
-            to_window = cv2.putText(to_window, pose, (center[0]-int(400*z_est), center[1]-int(300*z_est)), cv2.FONT_HERSHEY_PLAIN, 100*(z_est*0.1), color, 2, cv2.LINE_4)
+            putScope(to_window, center[0], center[1], int(50*(z_est*0.1)), int(400*(z_est)))
+            to_window = cv2.putText(to_window, pose, (center[0]-int(400*z_est), center[1]-int(300*z_est)), cv2.FONT_HERSHEY_PLAIN, 100*(z_est*0.1), (0, 255, 0), 2, cv2.LINE_4)
 
 
 
