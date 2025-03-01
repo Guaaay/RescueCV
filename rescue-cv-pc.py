@@ -9,7 +9,7 @@ import time
 
 
 # Model available to download here: https://developers.google.com/mediapipe/solutions/vision/pose_landmarker#models
-model_path = "pose_landmarker_lite.task"
+model_path = "pose_landmarker_lite_model.task"
 
 video_source = 0
 
